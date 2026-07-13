@@ -6,7 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     app_name: str = "Production FastAPI Template"
-    app_version: str = "0.1.0"
+    app_version: str = "0.2.0"
     environment: Literal["local", "test", "staging", "production"] = "local"
     debug: bool = False
 
@@ -15,6 +15,12 @@ class Settings(BaseSettings):
     docs_url: str | None = "/docs"
     redoc_url: str | None = "/redoc"
     openapi_url: str | None = "/openapi.json"
+
+    database_url: str = "postgresql+psycopg://fastapi:fastapi@localhost:5432/fastapi"
+    database_echo: bool = False
+    database_pool_size: int = 5
+    database_max_overflow: int = 10
+    database_pool_timeout: int = 30
 
     model_config = SettingsConfigDict(
         env_file=".env",

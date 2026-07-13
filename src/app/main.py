@@ -5,11 +5,13 @@ from fastapi import FastAPI
 
 from app.api.router import api_router
 from app.core.config import settings
+from app.db.session import engine
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     yield
+    await engine.dispose()
 
 
 def create_application() -> FastAPI:

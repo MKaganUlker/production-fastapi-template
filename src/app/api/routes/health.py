@@ -1,11 +1,17 @@
-from typing import Literal
+from typing import Annotated, Literal
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+from app.db.session import get_db_session
 
 router = APIRouter(prefix="/health", tags=["Health"])
+
+DatabaseSession = Annotated[AsyncSession, Depends(get_db_session)]
 
 
 class HealthResponse(BaseModel):
@@ -13,6 +19,11 @@ class HealthResponse(BaseModel):
     service: str
     version: str
     environment: str
+
+
+class ReadinessResponse(BaseModel):
+    status: Literal["ready"]
+    database: Literal["available"]
 
 
 @router.get(
@@ -26,4 +37,29 @@ async def health_check() -> HealthResponse:
         service=settings.app_name,
         version=settings.app_version,
         environment=settings.environment,
+    )
+
+
+@router.get(
+    "/ready",
+    response_model=ReadinessResponse,
+    summary="Check application readiness",
+    responses={
+        status.HTTP_503_SERVICE_UNAVAILABLE: {
+            "description": "Database is unavailable",
+        }
+    },
+)
+async def readiness_check(session: DatabaseSession) -> ReadinessResponse:
+    try:
+        await session.execute(text("SELECT 1"))
+    except SQLAlchemyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database is unavailable",
+        ) from exc
+
+    return ReadinessResponse(
+        status="ready",
+        database="available",
     )
