@@ -1,6 +1,7 @@
 from functools import lru_cache
 from typing import Literal
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -16,7 +17,9 @@ class Settings(BaseSettings):
     redoc_url: str | None = "/redoc"
     openapi_url: str | None = "/openapi.json"
 
-    database_url: str = "postgresql+psycopg://fastapi:fastapi@localhost:5432/fastapi"
+    database_url: str = Field(
+        description="PostgreSQL connection URL",
+    )
     database_echo: bool = False
     database_pool_size: int = 5
     database_max_overflow: int = 10

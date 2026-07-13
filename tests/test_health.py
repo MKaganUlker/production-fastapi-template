@@ -1,4 +1,5 @@
-from unittest.mock import AsyncMock
+from collections.abc import AsyncIterator
+from unittest.mock import AsyncMock, MagicMock
 
 from fastapi.testclient import TestClient
 from sqlalchemy.exc import OperationalError
@@ -6,7 +7,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db_session
 from app.main import app
-
 
 client = TestClient(app)
 
@@ -45,7 +45,12 @@ def test_openapi_schema_is_available() -> None:
 def test_readiness_check_returns_ready_when_database_is_available() -> None:
     session = AsyncMock(spec=AsyncSession)
 
-    async def override_get_db_session():
+    result = MagicMock()
+    result.scalar_one.return_value = 1
+
+    session.execute.return_value = result
+
+    async def override_get_db_session() -> AsyncIterator[AsyncSession]:
         yield session
 
     app.dependency_overrides[get_db_session] = override_get_db_session
@@ -60,18 +65,21 @@ def test_readiness_check_returns_ready_when_database_is_available() -> None:
         "status": "ready",
         "database": "available",
     }
+
     session.execute.assert_awaited_once()
+    result.scalar_one.assert_called_once_with()
 
 
 def test_readiness_check_returns_503_when_database_is_unavailable() -> None:
     session = AsyncMock(spec=AsyncSession)
+
     session.execute.side_effect = OperationalError(
         statement="SELECT 1",
         params=None,
         orig=Exception("Database connection failed"),
     )
 
-    async def override_get_db_session():
+    async def override_get_db_session() -> AsyncIterator[AsyncSession]:
         yield session
 
     app.dependency_overrides[get_db_session] = override_get_db_session
@@ -85,3 +93,5 @@ def test_readiness_check_returns_503_when_database_is_unavailable() -> None:
     assert response.json() == {
         "detail": "Database is unavailable",
     }
+
+    session.execute.assert_awaited_once()

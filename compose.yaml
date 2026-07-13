@@ -1,10 +1,11 @@
 services:
   db:
     image: postgres:17-alpine
+    container_name: production-fastapi-template-db
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-fastapi}
-      POSTGRES_USER: ${POSTGRES_USER:-fastapi}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-fastapi}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
@@ -13,7 +14,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "pg_isready -U ${POSTGRES_USER:-fastapi} -d ${POSTGRES_DB:-fastapi}",
+          "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}",
         ]
       interval: 5s
       timeout: 5s
@@ -25,13 +26,19 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    container_name: production-fastapi-template-api
     environment:
       APP_APP_NAME: Production FastAPI Template
       APP_APP_VERSION: 0.2.0
       APP_ENVIRONMENT: local
       APP_DEBUG: "false"
-      APP_DATABASE_URL: >-
-        postgresql+psycopg://${POSTGRES_USER:-fastapi}:${POSTGRES_PASSWORD:-fastapi}@db:5432/${POSTGRES_DB:-fastapi}
+      APP_API_V1_PREFIX: /api/v1
+
+      APP_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      APP_DATABASE_ECHO: "false"
+      APP_DATABASE_POOL_SIZE: "5"
+      APP_DATABASE_MAX_OVERFLOW: "10"
+      APP_DATABASE_POOL_TIMEOUT: "30"
     ports:
       - "8000:8000"
     depends_on:

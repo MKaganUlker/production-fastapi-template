@@ -1,3 +1,4 @@
+import logging
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -8,6 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.db.session import get_db_session
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/health", tags=["Health"])
 
@@ -52,8 +55,13 @@ async def health_check() -> HealthResponse:
 )
 async def readiness_check(session: DatabaseSession) -> ReadinessResponse:
     try:
-        await session.execute(text("SELECT 1"))
+        result = await session.execute(text("SELECT 1"))
+
+        if result.scalar_one() != 1:
+            raise RuntimeError("Unexpected database readiness result")
     except SQLAlchemyError as exc:
+        logger.exception("Database readiness check failed")
+
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Database is unavailable",
